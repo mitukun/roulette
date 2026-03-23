@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>質問ルーレット - 謝恩会</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Hiragino Sans', 'Meiryo', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            transition: background 0.3s ease;
+        }
+
+        body.spinning-mode {
+            animation: background-pulse 0.5s infinite alternate;
+        }
+
+        @keyframes background-pulse {
+            0% { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+            100% { background: linear-gradient(135deg, #ff6b6b 0%, #ffd700 100%); }
+        }
+
+        body.win-mode {
+            background: linear-gradient(135deg, #ffd700 0%, #ff6b6b 50%, #667eea 100%);
+            animation: rainbow-bg 2s ease;
+        }
+
+        @keyframes rainbow-bg {
+            0% { filter: brightness(1); }
+            25% { filter: brightness(1.3); }
+            50% { filter: brightness(1); }
+            75% { filter: brightness(1.2); }
+            100% { filter: brightness(1); }
+        }
+
+        .container {
+            text-align: center;
+            padding: 20px;
+            width: 100%;
+            max-width: 900px;
+        }
+
+        h1 {
+            color: white;
+            font-size: 2.5rem;
+            margin-bottom: 30px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+        }
+
+        .roulette-box {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin: 20px auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .roulette-box.spinning {
+            animation: box-shake 0.1s infinite;
+            box-shadow: 0 0 50px rgba(255,107,107,0.8), 0 0 100px rgba(255,215,0,0.5);
+        }
+
+        .roulette-box.winner {
+            animation: winner-glow 0.5s ease-out;
+            box-shadow: 0 0 80px rgba(255,215,0,1), 0 0 120px rgba(255,107,107,0.8);
+        }
+
+        @keyframes box-shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px) rotate(-1deg); }
+            75% { transform: translateX(5px) rotate(1deg); }
+        }
+
+        @keyframes winner-glow {
+            0% { transform: scale(1.1); }
+            50% { transform: scale(0.95); }
+            100% { transform: scale(1); }
+        }
+
+        .roulette-box::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                45deg,
+                transparent 30%,
+                rgba(255,215,0,0.1) 50%,
+                transparent 70%
+            );
+            animation: shine 3s infinite;
+            pointer-events: none;
+        }
+
+        @keyframes shine {
+            0% { transform: translateX(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) rotate(45deg); }
+        }
+
+        /* スピン中のライト演出 */
+        .spin-lights {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .roulette-box.spinning .spin-lights {
+            display: block;
+        }
+
+        .spin-light {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            animation: blink 0.2s infinite alternate;
+        }
+
+        @keyframes blink {
+            0% { opacity: 0.3; transform: scale(0.8); }
+            100% { opacity: 1; transform: scale(1.2); }
+        }
+
+        .question-display {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #333;
+            min-height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            border: 5px solid #667eea;
+            border-radius: 15px;
+            background: linear-gradient(145deg, #f5f5f5, #ffffff);
+            transition: all 0.3s ease;
+            position: relative;
+            z-index: 10;
+        }
+
+        .question-display.spinning {
+            animation: slot-spin 0.08s infinite;
+            border-color: #ff6b6b;
+            background: linear-gradient(145deg, #fff5f5, #ffffff);
+        }
+
+        .question-display.revealed {
+            animation: reveal-bounce 0.8s ease-out;
+            border-color: #ffd700;
+            border-width: 8px;
+            box-shadow: 0 0 50px rgba(255,215,0,0.8), inset 0 0 30px rgba(255,215,0,0.2);
+            background: linear-gradient(145deg, #fffef0, #ffffff);
+        }
+
+        @keyframes slot-spin {
+            0% { transform: translateY(-3px); }
+            50% { transform: translateY(3px); }
+            100% { transform: translateY(-3px); }
+        }
+
+        @keyframes reveal-bounce {
+            0% { transform: scale(0.5) rotate(-10deg); opacity: 0; }
+            40% { transform: scale(1.2) rotate(5deg); }
+            60% { transform: scale(0.9) rotate(-3deg); }
+            80% { transform: scale(1.05) rotate(1deg); }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+
+        .counter {
+            margin-top: 20px;
+            font-size: 1.2rem;
+            color: #666;
+        }
+
+        .btn {
+            padding: 20px 60px;
+            font-size: 1.8rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+        }
+
+        .btn-start {
+            background: linear-gradient(145deg, #ff6b6b, #ee5a5a);
+            color: white;
+            box-shadow: 0 10px 30px rgba(255,107,107,0.4);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-start::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.3), transparent);
+            transform: rotate(45deg);
+            animation: btn-shine 2s infinite;
+        }
+
+        @keyframes btn-shine {
+            0% { left: -50%; }
+            100% { left: 150%; }
+        }
+
+        .btn-start:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 15px 40px rgba(255,107,107,0.5);
+        }
+
+        .btn-start:active {
+            transform: translateY(0) scale(0.98);
+        }
+
+        .btn-start:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+
+        .btn-start:disabled::after {
+            display: none;
+        }
+
+        .btn-reset {
+            background: linear-gradient(145deg, #4ecdc4, #44a08d);
+            color: white;
+            box-shadow: 0 10px 30px rgba(78,205,196,0.4);
+            padding: 15px 40px;
+            font-size: 1.2rem;
+        }
+
+        .file-input-wrapper {
+            margin-bottom: 30px;
+        }
+
+        .file-input-wrapper input[type="file"] {
+            display: none;
+        }
+
+        .file-label {
+            display: inline-block;
+            padding: 15px 30px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px dashed rgba(255,255,255,0.5);
+        }
+
+        .file-label:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .file-label.loaded {
+            background: rgba(76,175,80,0.8);
+            border-style: solid;
+        }
+
+        .audio-label {
+            font-size: 0.9rem;
+            padding: 10px 20px;
+        }
+
+        .audio-label.loaded {
+            background: rgba(255,152,0,0.8);
+        }
+
+        /* 紙吹雪 */
+        .confetti {
+            position: fixed;
+            width: 15px;
+            height: 15px;
+            top: -20px;
+            animation: confetti-fall 3s linear forwards;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        @keyframes confetti-fall {
+            0% {
+                transform: translateY(0) rotate(0deg) scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(100vh) rotate(720deg) scale(0.5);
+                opacity: 0;
+            }
+        }
+
+        /* 完了メッセージ */
+        .complete-message {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .complete-message.show {
+            display: flex;
+        }
+
+        .complete-content {
+            background: linear-gradient(145deg, #ffd700, #ffaa00);
+            padding: 50px;
+            border-radius: 20px;
+            text-align: center;
+            animation: bounce-in 0.5s ease-out;
+        }
+
+        @keyframes bounce-in {
+            0% { transform: scale(0); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .complete-content h2 {
+            font-size: 3rem;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .history-list {
+            margin-top: 20px;
+            text-align: left;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 10px;
+            background: rgba(0,0,0,0.05);
+            border-radius: 10px;
+        }
+
+        .history-item {
+            padding: 5px 10px;
+            margin: 5px 0;
+            background: rgba(255,255,255,0.5);
+            border-radius: 5px;
+            font-size: 0.9rem;
+        }
+
+        /* スター演出 */
+        .star {
+            position: fixed;
+            font-size: 3rem;
+            animation: star-burst 1.5s ease-out forwards;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        @keyframes star-burst {
+            0% {
+                transform: scale(0) rotate(0deg);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.5) rotate(180deg);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(2) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        /* 花火演出 */
+        .firework {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            animation: firework-explode 1s ease-out forwards;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        @keyframes firework-explode {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(20);
+                opacity: 0;
+            }
+        }
+
+        /* ドラムロール中のテキスト */
+        .drumroll-text {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 5rem;
+            color: white;
+            text-shadow: 0 0 30px rgba(255,215,0,1);
+            z-index: 100;
+            animation: drumroll-pulse 0.3s infinite;
+            pointer-events: none;
+            display: none;
+        }
+
+        .drumroll-text.show {
+            display: block;
+        }
+
+        @keyframes drumroll-pulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
+            50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+        }
+
+        /* 当たりフラッシュ */
+        .flash-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        .flash-overlay.flash {
+            animation: flash-effect 0.5s ease-out;
+        }
+
+        @keyframes flash-effect {
+            0% { opacity: 0.8; }
+            100% { opacity: 0; }
+        }
+
+        /* 勝利テキスト */
+        .win-text {
+            position: fixed;
+            top: 15%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 4rem;
+            font-weight: bold;
+            color: #ffd700;
+            text-shadow: 0 0 20px rgba(255,107,107,1), 0 0 40px rgba(255,215,0,1);
+            z-index: 1001;
+            animation: win-text-anim 2s ease-out forwards;
+            pointer-events: none;
+            display: none;
+        }
+
+        .win-text.show {
+            display: block;
+        }
+
+        @keyframes win-text-anim {
+            0% { transform: translateX(-50%) scale(0) rotate(-20deg); opacity: 0; }
+            30% { transform: translateX(-50%) scale(1.3) rotate(10deg); opacity: 1; }
+            50% { transform: translateX(-50%) scale(1) rotate(-5deg); }
+            70% { transform: translateX(-50%) scale(1.1) rotate(3deg); }
+            100% { transform: translateX(-50%) scale(1) rotate(0deg); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="flash-overlay" id="flashOverlay"></div>
+    <div class="drumroll-text" id="drumrollText">🥁</div>
+    <div class="win-text" id="winText">🎉 決定！ 🎉</div>
+
+    <div class="container">
+        <h1>🎉 質問ルーレット 🎉</h1>
+
+        <div class="file-input-wrapper">
+            <input type="file" id="csvFile" accept=".csv">
+            <label for="csvFile" class="file-label" id="fileLabel">
+                📁 CSVファイルを選択してください
+            </label>
+        </div>
+
+        <div class="file-input-wrapper">
+            <input type="file" id="winSoundFile" accept="audio/*">
+            <label for="winSoundFile" class="file-label audio-label" id="winSoundLabel">
+                🔊 当たり音（mp3）を選択（任意）
+            </label>
+        </div>
+
+        <div class="roulette-box" id="rouletteBox">
+            <div class="spin-lights" id="spinLights"></div>
+            <div class="question-display" id="questionDisplay">
+                ここに質問が表示されます
+            </div>
+            <div class="counter" id="counter"></div>
+        </div>
+
+        <button class="btn btn-start" id="startBtn" disabled>
+            🎰 スタート！
+        </button>
+
+        <br>
+
+        <button class="btn btn-reset" id="resetBtn" style="display: none;">
+            🔄 最初からやり直す
+        </button>
+
+        <div class="history-list" id="historyList" style="display: none;">
+            <strong>出た質問:</strong>
+            <div id="historyItems"></div>
+        </div>
+    </div>
+
+    <div class="complete-message" id="completeMessage">
+        <div class="complete-content">
+            <h2>🎊 全ての質問が出ました！ 🎊</h2>
+            <p>お疲れ様でした！</p>
+            <button class="btn btn-reset" onclick="location.reload()">
+                🔄 もう一度
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // ========== 変数 ==========
+        let questions = [];
+        let remainingQuestions = [];
+        let usedQuestions = [];
+        let isSpinning = false;
+        let spinInterval;
+        let audioContext;
+        let drumrollOscillators = [];
+        let customWinSound = null; // カスタム当たり音
+
+        // ========== DOM要素 ==========
+        const csvFileInput = document.getElementById('csvFile');
+        const fileLabel = document.getElementById('fileLabel');
+        const questionDisplay = document.getElementById('questionDisplay');
+        const startBtn = document.getElementById('startBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const counter = document.getElementById('counter');
+        const historyList = document.getElementById('historyList');
+        const historyItems = document.getElementById('historyItems');
+        const completeMessage = document.getElementById('completeMessage');
+        const rouletteBox = document.getElementById('rouletteBox');
+        const flashOverlay = document.getElementById('flashOverlay');
+        const drumrollText = document.getElementById('drumrollText');
+        const winText = document.getElementById('winText');
+        const spinLights = document.getElementById('spinLights');
+        const winSoundFile = document.getElementById('winSoundFile');
+        const winSoundLabel = document.getElementById('winSoundLabel');
+
+        // ========== カスタム音声ファイル読み込み ==========
+        winSoundFile.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const url = URL.createObjectURL(file);
+            customWinSound = new Audio(url);
+            customWinSound.load();
+
+            winSoundLabel.textContent = `🔊 ${file.name}`;
+            winSoundLabel.classList.add('loaded');
+        });
+
+        // カスタム音声を再生
+        function playCustomWinSound() {
+            if (customWinSound) {
+                customWinSound.currentTime = 0;
+                customWinSound.play().catch(e => console.log('Audio play failed:', e));
+            }
+        }
+
+        // スピンライトを生成
+        function createSpinLights() {
+            const colors = ['#ff6b6b', '#ffd700', '#4ecdc4', '#ff69b4', '#00ff00'];
+            for (let i = 0; i < 12; i++) {
+                const light = document.createElement('div');
+                light.className = 'spin-light';
+                const angle = (i / 12) * Math.PI * 2;
+                const radius = 45;
+                light.style.left = `calc(50% + ${Math.cos(angle) * radius}% - 10px)`;
+                light.style.top = `calc(50% + ${Math.sin(angle) * radius}% - 10px)`;
+                light.style.backgroundColor = colors[i % colors.length];
+                light.style.animationDelay = `${i * 0.05}s`;
+                spinLights.appendChild(light);
+            }
+        }
+        createSpinLights();
+
+        // ========== 音声生成 ==========
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        // ワクワクするドラムロール（継続的に鳴る）
+        function startDrumroll() {
+            initAudio();
+            stopDrumroll();
+
+            const now = audioContext.currentTime;
+
+            // 低音のドラムベース
+            function createDrumHit(time, freq) {
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                osc.connect(gain);
+                gain.connect(audioContext.destination);
+                osc.frequency.value = freq;
+                osc.type = 'triangle';
+                gain.gain.setValueAtTime(0.15, time);
+                gain.gain.exponentialRampToValueAtTime(0.01, time + 0.08);
+                osc.start(time);
+                osc.stop(time + 0.08);
+                drumrollOscillators.push(osc);
+            }
+
+            // 6秒間のドラムロール（だんだん速くなる）
+            let time = now;
+            let interval = 0.15;
+            for (let i = 0; i < 80; i++) {
+                createDrumHit(time, 100 + Math.random() * 50);
+                createDrumHit(time + 0.02, 150 + Math.random() * 50);
+                time += interval;
+                interval = Math.max(0.025, interval * 0.97); // だんだん速く
+            }
+
+            // ハイハット的なシャカシャカ（6秒間）
+            const noise = audioContext.createBufferSource();
+            const noiseBuffer = audioContext.createBuffer(1, audioContext.sampleRate * 6, audioContext.sampleRate);
+            const noiseData = noiseBuffer.getChannelData(0);
+            for (let i = 0; i < noiseData.length; i++) {
+                noiseData[i] = Math.random() * 2 - 1;
+            }
+            noise.buffer = noiseBuffer;
+
+            const noiseFilter = audioContext.createBiquadFilter();
+            noiseFilter.type = 'highpass';
+            noiseFilter.frequency.value = 5000;
+
+            const noiseGain = audioContext.createGain();
+            noiseGain.gain.setValueAtTime(0.03, now);
+            noiseGain.gain.linearRampToValueAtTime(0.12, now + 5);
+            noiseGain.gain.linearRampToValueAtTime(0.05, now + 6);
+
+            noise.connect(noiseFilter);
+            noiseFilter.connect(noiseGain);
+            noiseGain.connect(audioContext.destination);
+            noise.start(now);
+            noise.stop(now + 6);
+            drumrollOscillators.push(noise);
+        }
+
+        function stopDrumroll() {
+            drumrollOscillators.forEach(osc => {
+                try { osc.stop(); } catch(e) {}
+            });
+            drumrollOscillators = [];
+        }
+
+        function playTickSound(pitch = 1) {
+            initAudio();
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+
+            osc.frequency.value = (600 + Math.random() * 400) * pitch;
+            osc.type = 'sine';
+
+            gain.gain.setValueAtTime(0.08, audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.04);
+
+            osc.start();
+            osc.stop(audioContext.currentTime + 0.04);
+        }
+
+        // 豪華なファンファーレ・喜びの音楽
+        function playVictoryFanfare() {
+            initAudio();
+            const now = audioContext.currentTime;
+
+            // メインメロディー（華やかなファンファーレ）
+            const melody = [
+                { freq: 523, time: 0, dur: 0.15 },      // C
+                { freq: 659, time: 0.15, dur: 0.15 },   // E
+                { freq: 784, time: 0.3, dur: 0.15 },    // G
+                { freq: 1047, time: 0.45, dur: 0.3 },   // C (high)
+                { freq: 880, time: 0.8, dur: 0.15 },    // A
+                { freq: 1047, time: 0.95, dur: 0.15 },  // C
+                { freq: 1175, time: 1.1, dur: 0.15 },   // D
+                { freq: 1319, time: 1.25, dur: 0.5 },   // E (high, long)
+            ];
+
+            melody.forEach(note => {
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                osc.connect(gain);
+                gain.connect(audioContext.destination);
+                osc.frequency.value = note.freq;
+                osc.type = 'square';
+                gain.gain.setValueAtTime(0.15, now + note.time);
+                gain.gain.setValueAtTime(0.15, now + note.time + note.dur * 0.7);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + note.time + note.dur);
+                osc.start(now + note.time);
+                osc.stop(now + note.time + note.dur + 0.1);
+            });
+
+            // ハーモニー（和音）
+            const chords = [
+                { freqs: [523, 659, 784], time: 0, dur: 0.4 },
+                { freqs: [698, 880, 1047], time: 0.45, dur: 0.3 },
+                { freqs: [784, 988, 1175], time: 0.8, dur: 0.4 },
+                { freqs: [1047, 1319, 1568], time: 1.25, dur: 0.6 },
+            ];
+
+            chords.forEach(chord => {
+                chord.freqs.forEach(freq => {
+                    const osc = audioContext.createOscillator();
+                    const gain = audioContext.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioContext.destination);
+                    osc.frequency.value = freq;
+                    osc.type = 'sine';
+                    gain.gain.setValueAtTime(0.08, now + chord.time);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + chord.time + chord.dur);
+                    osc.start(now + chord.time);
+                    osc.stop(now + chord.time + chord.dur + 0.1);
+                });
+            });
+
+            // キラキラ効果音
+            for (let i = 0; i < 10; i++) {
+                setTimeout(() => {
+                    const osc = audioContext.createOscillator();
+                    const gain = audioContext.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioContext.destination);
+                    osc.frequency.value = 2000 + Math.random() * 2000;
+                    osc.type = 'sine';
+                    gain.gain.setValueAtTime(0.05, audioContext.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.2);
+                    osc.start();
+                    osc.stop(audioContext.currentTime + 0.2);
+                }, i * 100 + 500);
+            }
+
+            // 最後のシンバル風
+            setTimeout(() => {
+                const noise = audioContext.createBufferSource();
+                const buffer = audioContext.createBuffer(1, audioContext.sampleRate * 0.5, audioContext.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < data.length; i++) {
+                    data[i] = Math.random() * 2 - 1;
+                }
+                noise.buffer = buffer;
+                const filter = audioContext.createBiquadFilter();
+                filter.type = 'highpass';
+                filter.frequency.value = 3000;
+                const gain = audioContext.createGain();
+                gain.gain.setValueAtTime(0.15, audioContext.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(audioContext.destination);
+                noise.start();
+            }, 1200);
+        }
+
+        function playStartSound() {
+            initAudio();
+            const now = audioContext.currentTime;
+
+            // 「ピロリロリン」というワクワク音
+            const notes = [392, 440, 494, 523, 587, 659];
+            notes.forEach((freq, i) => {
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                osc.connect(gain);
+                gain.connect(audioContext.destination);
+                osc.frequency.value = freq;
+                osc.type = 'sine';
+                gain.gain.setValueAtTime(0.1, now + i * 0.05);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.05 + 0.1);
+                osc.start(now + i * 0.05);
+                osc.stop(now + i * 0.05 + 0.15);
+            });
+        }
+
+        // ========== 紙吹雪 ==========
+        function createConfetti() {
+            const colors = ['#ff6b6b', '#ffd700', '#4ecdc4', '#667eea', '#ff69b4', '#00ff00', '#ff8c00', '#00bfff'];
+
+            for (let i = 0; i < 80; i++) {
+                setTimeout(() => {
+                    const confetti = document.createElement('div');
+                    confetti.className = 'confetti';
+                    confetti.style.left = Math.random() * 100 + 'vw';
+                    confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                    confetti.style.animationDuration = (2 + Math.random() * 2) + 's';
+                    confetti.style.width = (10 + Math.random() * 15) + 'px';
+                    confetti.style.height = (10 + Math.random() * 15) + 'px';
+
+                    if (Math.random() > 0.5) {
+                        confetti.style.borderRadius = '50%';
+                    }
+
+                    document.body.appendChild(confetti);
+                    setTimeout(() => confetti.remove(), 4000);
+                }, i * 20);
+            }
+        }
+
+        function createStars() {
+            const stars = ['⭐', '✨', '🌟', '💫', '🎉', '🎊', '✨'];
+
+            for (let i = 0; i < 20; i++) {
+                setTimeout(() => {
+                    const star = document.createElement('div');
+                    star.className = 'star';
+                    star.textContent = stars[Math.floor(Math.random() * stars.length)];
+                    star.style.left = (10 + Math.random() * 80) + 'vw';
+                    star.style.top = (10 + Math.random() * 80) + 'vh';
+                    star.style.fontSize = (2 + Math.random() * 2) + 'rem';
+
+                    document.body.appendChild(star);
+                    setTimeout(() => star.remove(), 1500);
+                }, i * 50);
+            }
+        }
+
+        function createFireworks() {
+            const colors = ['#ff6b6b', '#ffd700', '#4ecdc4', '#ff69b4', '#00ff00'];
+
+            for (let i = 0; i < 5; i++) {
+                setTimeout(() => {
+                    const firework = document.createElement('div');
+                    firework.className = 'firework';
+                    firework.style.left = (20 + Math.random() * 60) + 'vw';
+                    firework.style.top = (20 + Math.random() * 40) + 'vh';
+                    firework.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                    firework.style.boxShadow = `0 0 20px ${firework.style.backgroundColor}`;
+
+                    document.body.appendChild(firework);
+                    setTimeout(() => firework.remove(), 1000);
+                }, i * 200);
+            }
+        }
+
+        // ========== CSV読み込み ==========
+        csvFileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                parseCSV(text);
+            };
+            reader.readAsText(file);
+        });
+
+        function parseCSV(text) {
+            const lines = text.split('\n').filter(line => line.trim());
+            questions = [];
+
+            lines.forEach(line => {
+                const cells = line.split(',').map(cell => cell.trim().replace(/^["']|["']$/g, ''));
+                cells.forEach(cell => {
+                    if (cell) questions.push(cell);
+                });
+            });
+
+            if (questions.length > 0) {
+                remainingQuestions = [...questions];
+                usedQuestions = [];
+                fileLabel.textContent = `✅ ${questions.length}個の質問を読み込みました`;
+                fileLabel.classList.add('loaded');
+                startBtn.disabled = false;
+                updateCounter();
+            }
+        }
+
+        // ========== カウンター更新 ==========
+        function updateCounter() {
+            counter.textContent = `残り: ${remainingQuestions.length} / 全${questions.length}問`;
+        }
+
+        // ========== 履歴更新 ==========
+        function updateHistory(question) {
+            historyList.style.display = 'block';
+            const item = document.createElement('div');
+            item.className = 'history-item';
+            item.textContent = `${usedQuestions.length}. ${question}`;
+            historyItems.insertBefore(item, historyItems.firstChild);
+        }
+
+        // ========== ルーレット開始 ==========
+        startBtn.addEventListener('click', function() {
+            if (isSpinning || remainingQuestions.length === 0) return;
+
+            isSpinning = true;
+            startBtn.disabled = true;
+            questionDisplay.classList.add('spinning');
+            questionDisplay.classList.remove('revealed');
+            rouletteBox.classList.add('spinning');
+            rouletteBox.classList.remove('winner');
+            document.body.classList.add('spinning-mode');
+            document.body.classList.remove('win-mode');
+
+            // 開始音
+            playStartSound();
+
+            // ドラムロール開始
+            setTimeout(() => {
+                startDrumroll();
+                drumrollText.classList.add('show');
+            }, 300);
+
+            // 高速で質問を切り替え（約6秒間）
+            let speed = 50;
+            let iteration = 0;
+            const maxIterations = 35; // 固定で35回
+            let pitch = 1;
+            const startTime = Date.now();
+            const totalDuration = 6000; // 6秒
+
+            function spin() {
+                const elapsed = Date.now() - startTime;
+
+                if (elapsed >= totalDuration || iteration >= maxIterations) {
+                    clearTimeout(spinInterval);
+                    drumrollText.classList.remove('show');
+                    selectFinalQuestion();
+                    return;
+                }
+
+                const randomQ = questions[Math.floor(Math.random() * questions.length)];
+                questionDisplay.textContent = randomQ;
+
+                // だんだん高音に
+                const progress = elapsed / totalDuration;
+                pitch = 1 + progress * 0.5;
+                playTickSound(pitch);
+
+                iteration++;
+                // 最初は速く、後半はゆっくり（6秒に収まるよう調整）
+                speed = 50 + Math.pow(progress * 10, 2) * 5;
+                spinInterval = setTimeout(spin, speed);
+            }
+
+            spin();
+        });
+
+        // ========== 最終質問を選択 ==========
+        function selectFinalQuestion() {
+            stopDrumroll();
+
+            const index = Math.floor(Math.random() * remainingQuestions.length);
+            const selectedQuestion = remainingQuestions[index];
+
+            remainingQuestions.splice(index, 1);
+            usedQuestions.push(selectedQuestion);
+
+            // 演出開始
+            document.body.classList.remove('spinning-mode');
+            document.body.classList.add('win-mode');
+            rouletteBox.classList.remove('spinning');
+            rouletteBox.classList.add('winner');
+
+            // フラッシュ
+            flashOverlay.classList.add('flash');
+            setTimeout(() => flashOverlay.classList.remove('flash'), 500);
+
+            // 勝利テキスト
+            winText.classList.add('show');
+            setTimeout(() => winText.classList.remove('show'), 2000);
+
+            // 質問表示
+            questionDisplay.textContent = selectedQuestion;
+            questionDisplay.classList.remove('spinning');
+            questionDisplay.classList.add('revealed');
+
+            // 喜びの演出！
+            playCustomWinSound(); // カスタム音声があれば再生
+            playVictoryFanfare();
+            createConfetti();
+            createStars();
+            createFireworks();
+
+            // 状態更新
+            updateCounter();
+            updateHistory(selectedQuestion);
+
+            isSpinning = false;
+
+            if (remainingQuestions.length > 0) {
+                setTimeout(() => {
+                    startBtn.disabled = false;
+                    document.body.classList.remove('win-mode');
+                }, 2000);
+            } else {
+                setTimeout(() => {
+                    completeMessage.classList.add('show');
+                }, 2000);
+            }
+
+            resetBtn.style.display = 'inline-block';
+        }
+
+        // ========== リセット ==========
+        resetBtn.addEventListener('click', function() {
+            remainingQuestions = [...questions];
+            usedQuestions = [];
+            historyItems.innerHTML = '';
+            historyList.style.display = 'none';
+            questionDisplay.textContent = 'ここに質問が表示されます';
+            questionDisplay.classList.remove('revealed', 'spinning');
+            rouletteBox.classList.remove('winner', 'spinning');
+            document.body.classList.remove('win-mode', 'spinning-mode');
+            updateCounter();
+            startBtn.disabled = false;
+            resetBtn.style.display = 'none';
+        });
+    </script>
+</body>
+</html>
